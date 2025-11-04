@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>repoiQ - Code Analysis Portal</title>
+    <link rel="stylesheet" href="portal-styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="portal-container">
+        <!-- Header with brand name -->
+        <header class="portal-header">
+            <div class="brand">
+                <h1>repoiQ</h1>
+            </div>
+            <div class="user-dropdown">
+                <button class="user-menu-btn" id="user-menu-btn">
+                    <i class="fas fa-user"></i>
+                    <span id="logged-user">User</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="user-dropdown-menu" id="user-dropdown-menu">
+                    <div class="dropdown-item" onclick="openSettings()">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main content area -->
+        <div class="portal-main">
+            <!-- Left Sidebar -->
+            <aside class="sidebar">
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <ul class="nav-list">
+                            <li><a href="#" class="nav-link active" data-tab="submit"><i class="fas fa-plus"></i> New Analysis</a></li>
+                            <li><a href="#" class="nav-link" data-tab="status"><i class="fas fa-list"></i> Runs</a></li>
+                            <li><a href="#" class="nav-link" data-tab="archive"><i class="fas fa-archive"></i> Archive</a></li>
+                            <li><a href="#" class="nav-link" data-tab="analytics"><i class="fas fa-chart-bar"></i> Analytics</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="nav-section">
+                        <h3>Recent Runs</h3>
+                        <div class="stats-widget">
+                            <div class="stat-item">
+                                <span class="stat-label">Running Jobs</span>
+                                <span class="stat-value" id="running-jobs">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Total Analyses</span>
+                                <span class="stat-value" id="total-analyses">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- Right Pane with Tabs -->
+            <main class="content-pane">
+                <!-- Tab 1: New Analysis Form -->
+                <div class="tab-content active" id="submit-tab">
+                    <div class="tab-header">
+                        <h2><i class="fas fa-plus"></i> New Code Analysis</h2>
+                        <p>Submit a new repository for analysis</p>
+                    </div>
+                    
+                    <form class="analysis-form" id="analysis-form">
+                        <div class="form-section">
+                            <h3>Repository Selection</h3>
+                            
+                            <div class="form-group">
+                                <label for="github-auth">GitHub Authentication</label>
+                                <div class="auth-section">
+                                    <button type="button" class="btn btn-github" id="github-connect">
+                                        <i class="fab fa-github"></i> Connect to GitHub
+                                    </button>
+                                    <span class="auth-status" id="auth-status">Not connected</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group" id="repo-selection" style="display: none;">
+                                <label for="repo-select">Select Repository</label>
+                                <select id="repo-select" name="repo_url" required>
+                                    <option value="">Choose a repository...</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="branch-name">Branch Name</label>
+                                <input type="text" id="branch-name" name="branch_name" value="main" required>
+                                <small>Branch to analyze (default: main)</small>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Credentials & Configuration</h3>
+                            
+                            <div class="form-group">
+                                <label for="github-token">GitHub Personal Access Token</label>
+                                <input type="password" id="github-token" name="github_credentials" placeholder="ghp_xxxxxxxxxxxx">
+                                <small>Required for private repositories</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="aws-token">AWS Access Token</label>
+                                <input type="password" id="aws-token" name="aws_token" placeholder="AKIA...">
+                                <small>AWS credentials for analysis services</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="skip-directories">Skip Directories</label>
+                                <textarea id="skip-directories" name="skip_directories" rows="3" placeholder="node_modules&#10;.git&#10;build&#10;dist"></textarea>
+                                <small>One directory per line to exclude from analysis</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="llm-provider">LLM Provider</label>
+                                <select id="llm-provider" name="llm_provider" required>
+                                    <option value="claude">Claude (Anthropic)</option>
+                                    <option value="aws_bedrock">AWS Bedrock</option>
+                                    <option value="dummy">Dummy (Testing)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-play"></i> Start Analysis
+                            </button>
+                            <button type="reset" class="btn btn-secondary">
+                                <i class="fas fa-undo"></i> Reset Form
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab 2: Status of Previous Runs -->
+                <div class="tab-content" id="status-tab">
+                    <div class="tab-header">
+                        <h2><i class="fas fa-list"></i> Runs</h2>
+                    </div>
+                    
+                    <!-- Repository and Time Period Controls -->
+                    <div class="page-controls">
+                        <div class="form-group">
+                            <label for="runs-repo-select">Repository</label>
+                            <select id="runs-repo-select">
+                                <option value="">All Repositories</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="runs-time-period">Time Period</label>
+                            <select id="runs-time-period">
+                                <option value="7" selected>Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Sub-tabs for Runs -->
+                    <div class="sub-tabs">
+                        <button class="sub-tab-btn active" data-subtab="running">Running jobs</button>
+                        <button class="sub-tab-btn" data-subtab="past">Past jobs</button>
+                        <button class="sub-tab-btn" data-subtab="runs-analytics">Analytics</button>
+                    </div>
+                    
+                    <!-- Running Jobs Sub-tab -->
+                    <div class="sub-tab-content active" id="running-subtab">
+                        <div class="status-controls">
+                            <button class="btn btn-secondary" id="refresh-running">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="runs-list" id="running-jobs-list">
+                            <!-- Dynamic content will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Past Jobs Sub-tab -->
+                    <div class="sub-tab-content" id="past-subtab">
+                        <div class="status-controls">
+                            <button class="btn btn-secondary" id="refresh-past">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                            <div class="status-filters">
+                                <label>Filter by status:</label>
+                                <select id="past-status-filter">
+                                    <option value="">All</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="failed">Failed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="runs-list" id="past-jobs-list">
+                            <!-- Dynamic content will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Analytics Sub-tab -->
+                    <div class="sub-tab-content" id="runs-analytics-subtab">
+                        <div class="analytics-controls">
+                            <div class="form-group">
+                                <label for="runs-analytics-repo">Select Repository</label>
+                                <select id="runs-analytics-repo">
+                                    <option value="">All Repositories</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="runs-analytics-period">Time Period</label>
+                                <select id="runs-analytics-period">
+                                    <option value="7">Last 7 days</option>
+                                    <option value="30">Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <h3>Running Jobs</h3>
+                                <div class="metric-value" id="runs-metric-running">0</div>
+                            </div>
+                            <div class="metric-card">
+                                <h3>Completed Jobs</h3>
+                                <div class="metric-value" id="runs-metric-completed">0</div>
+                            </div>
+                            <div class="metric-card">
+                                <h3>Failed Jobs</h3>
+                                <div class="metric-value" id="runs-metric-failed">0</div>
+                            </div>
+                            <div class="metric-card">
+                                <h3>Success Rate</h3>
+                                <div class="metric-value" id="runs-metric-success">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Archive (Runs older than 2 weeks) -->
+                <div class="tab-content" id="archive-tab">
+                    <div class="tab-header">
+                        <h2><i class="fas fa-archive"></i> Archived Runs</h2>
+                        <p>Analysis runs older than 2 weeks</p>
+                    </div>
+                    
+                    <!-- Repository and Date Range Controls -->
+                    <div class="page-controls">
+                        <div class="form-group">
+                            <label for="archive-repo-select">Repository</label>
+                            <select id="archive-repo-select">
+                                <option value="">All Repositories</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="archive-date-from">From Date</label>
+                            <input type="date" id="archive-date-from">
+                        </div>
+                        <div class="form-group">
+                            <label for="archive-date-to">To Date</label>
+                            <input type="date" id="archive-date-to">
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-secondary" id="search-archive">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="archive-list" id="archive-list">
+                        <!-- Dynamic content will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Tab 4: Analytics -->
+                <div class="tab-content" id="analytics-tab">
+                    <div class="tab-header">
+                        <h2><i class="fas fa-chart-bar"></i> Analytics Dashboard</h2>
+                        <p>Analysis metrics and insights</p>
+                    </div>
+                    
+                    <!-- Repository and Time Period Controls -->
+                    <div class="page-controls">
+                        <div class="form-group">
+                            <label for="analytics-repo">Repository</label>
+                            <select id="analytics-repo">
+                                <option value="">All Repositories</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="analytics-period">Time Period</label>
+                            <select id="analytics-period">
+                                <option value="7" selected>Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                                <option value="365">Last year</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="analytics-dashboard">
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <h3>Total Runs</h3>
+                                <div class="metric-value" id="metric-runs">0</div>
+                            </div>
+                            <div class="metric-card">
+                                <h3>Token Usage</h3>
+                                <div class="metric-value" id="metric-tokens">0</div>
+                            </div>
+                            <div class="metric-card">
+                                <h3>Total Cost</h3>
+                                <div class="metric-value" id="metric-cost">$0.00</div>
+                            </div>
+                            <div class="metric-card">
+                                <h3>Avg. Issues Found</h3>
+                                <div class="metric-value" id="metric-issues">0</div>
+                            </div>
+                        </div>
+                        
+                        <div class="charts-section">
+                            <div class="chart-container">
+                                <h4>Analysis Trends</h4>
+                                <div class="chart-placeholder">
+                                    <i class="fas fa-chart-line"></i>
+                                    <p>Chart will be displayed here</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Detail View (Hidden by default) -->
+                <div class="tab-content" id="results-detail" style="display: none;">
+                    <div class="tab-header">
+                        <button class="btn btn-secondary back-btn" id="back-to-status">
+                            <i class="fas fa-arrow-left"></i> Back to Status
+                        </button>
+                        <h2 id="results-title">Analysis Results</h2>
+                    </div>
+                    
+                    <div class="results-content" id="results-content">
+                        <!-- Dynamic results content -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="portal-script.js"></script>
+</body>
+</html>
